@@ -208,9 +208,13 @@ fn no_targets(ids: &[vectorcraft_doc::NodeId], p: &Value) -> bool {
 
 /// The objects `stroke.set` edits with no `item`: a selected group or layer with a stroke row of
 /// its own edits that row, as the Stroke panel does with the group targeted (#6739); the other
-/// targets reach their painted leaves, as before.
+/// targets reach their painted leaves, as before. `target: "contents"` asks for the leaves, so
+/// every target reaches them then.
 fn own_stroke_or_leaves(s: &Session, p: &Value) -> Result<Vec<vectorcraft_doc::NodeId>> {
     let picked = super::targets(s, p)?;
+    if super::appearance::targets_contents(p)? {
+        return super::leaf_targets(s, &picked);
+    }
     let d = &s.doc()?.doc;
     let own = |id: &vectorcraft_doc::NodeId| {
         d.node(*id).is_some_and(|n| {
@@ -218,8 +222,9 @@ fn own_stroke_or_leaves(s: &Session, p: &Value) -> Result<Vec<vectorcraft_doc::N
         })
     };
     let (mut out, rest): (Vec<_>, Vec<_>) = picked.into_iter().partition(own);
+    let mut seen: std::collections::HashSet<vectorcraft_doc::NodeId> = out.iter().copied().collect();
     for id in super::leaf_targets(s, &rest)? {
-        if !out.contains(&id) {
+        if seen.insert(id) {
             out.push(id);
         }
     }

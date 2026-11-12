@@ -207,6 +207,13 @@ fn stroke_options_on_a_group_with_its_own_stroke_edit_that_stroke() {
     for id in [a, b] {
         assert!(node(&s, id).appearance.stroke().is_none(), "a member keeps no stroke");
     }
+    // `target: "contents"` still reaches the members, and leaves the group's own stroke alone.
+    let r = run(&mut s, "stroke.set", json!({"ids": [g.0], "join": "bevel", "target": "contents"}));
+    assert_eq!(r["objects"], 2, "{r}");
+    assert_eq!(node(&s, g).appearance.stroke().map(|st| st.join), Some(LineJoin::Round), "the group's own stroke is unchanged");
+    for id in [a, b] {
+        assert_eq!(node(&s, id).appearance.stroke().map(|st| (st.paint.clone(), st.join)), Some((Paint::None, LineJoin::Bevel)), "the member's row");
+    }
     // A group without a stroke of its own still reaches its members; for a join alone the row
     // made on each has no paint, so nothing becomes visible.
     let (c, d) = (rect(&mut s, 400.0), rect(&mut s, 550.0));
